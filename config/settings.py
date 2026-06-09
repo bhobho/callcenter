@@ -1,4 +1,6 @@
 from pydantic_settings import BaseSettings
+from services.prompts import get_system_prompt
+
 
 class Settings(BaseSettings):
     # Twilio Configuration
@@ -20,18 +22,26 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     debug: bool = False
 
-    # System Prompt
-    system_prompt: str = """You are a professional and helpful customer service representative for a call center.
-    You should:
-    - Be friendly and professional
-    - Listen carefully to customer requests
-    - Provide clear and concise answers
-    - Offer to help with additional requests
-    - Handle common inquiries about billing, support, and general questions
-    Keep responses concise and natural for voice conversation (aim for 1-3 sentences)."""
+    # Call Center Configuration
+    call_center_type: str = "customer_service"  # customer_service, technical_support, appointment_scheduling, billing, sales
+    voice_id: str = "EXAVITQu4vr4xnSDxMaL"  # ElevenLabs voice ID
+    max_call_duration: int = 3600  # 1 hour in seconds
+    request_timeout: int = 30  # seconds
+
+    # System Prompt - dynamically loaded based on call_center_type
+    @property
+    def system_prompt(self) -> str:
+        return get_system_prompt(self.call_center_type)
 
     class Config:
         env_file = ".env"
         case_sensitive = False
 
-settings = Settings()
+
+# Create global settings instance
+try:
+    settings = Settings()
+except Exception as e:
+    # Fallback for development without .env file
+    print(f"Warning: Could not load settings from .env: {e}")
+    settings = None

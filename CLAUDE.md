@@ -60,27 +60,115 @@ voice-call-center/
 
 ## Development Notes
 
+### Architecture Overview
+
+```
+Twilio Webhook
+    ↓
+FastAPI Endpoint (/incoming-call)
+    ↓
+CallManager
+    ├→ LLMService (Claude)
+    ├→ SpeechToTextService (Deepgram)
+    ├→ TextToSpeechService (ElevenLabs)
+    ├→ MonitoringService
+    └→ CallDataStorage
+    ↓
+TwiML Response (XML)
+    ↓
+Twilio → User Audio
+```
+
+### Key Components
+
+1. **CallManager** (`services/call_manager.py`)
+   - Manages call state and conversation history
+   - Orchestrates service calls
+   - Tracks active calls
+
+2. **LLMService** (`services/llm.py`)
+   - Maintains conversation context
+   - Generates intelligent responses
+   - Keeps responses concise for voice
+
+3. **MonitoringService** (`services/monitoring.py`)
+   - Tracks call metrics
+   - Records errors and quality issues
+   - Provides health status
+
+4. **CallDataStorage** (`services/storage.py`)
+   - Persists call data to JSON
+   - Enables analytics and auditing
+   - Supports CSV export
+
+### System Prompts
+
+Different call center scenarios available:
+- `customer_service` - General support
+- `technical_support` - Technical assistance
+- `appointment_scheduling` - Schedule appointments
+- `billing` - Billing inquiries
+- `sales` - Product sales support
+
+Switch via `CALL_CENTER_TYPE` environment variable.
+
 ### Latency Optimization
-- Current implementation uses sequential processing (STT → LLM → TTS)
-- For production, consider:
-  - Streaming audio processing to reduce end-to-end latency
-  - Voice Activity Detection (VAD) to detect when user stops speaking
-  - Parallel processing where possible
-  - Prompt caching for frequently used system prompts
 
-### Integration Points
-- **Twilio**: Handles call signaling and audio streaming
-- **Deepgram**: Converts user speech to text in real-time
-- **Claude**: Generates contextual responses with conversation history
-- **ElevenLabs**: Converts responses back to natural-sounding speech
+Current implementation:
+- Sequential processing: Transcribe → Process → Respond
+- Average response time: ~2-3 seconds
+- Suitable for customer service interactions
 
-### Next Steps
-1. Implement real-time streaming for speech-to-text
-2. Add call state management (collect transcript, call duration, etc.)
-3. Implement error handling and fallback responses
-4. Add call recording and analytics
-5. Create agent personality system for different call types
-6. Add queue management for multiple concurrent calls
+For further optimization:
+- Stream text-to-speech response as LLM generates
+- Implement VAD (Voice Activity Detection)
+- Cache common responses
+- Use prompt caching for frequently used system prompts
+
+### Error Handling
+
+The application handles:
+- Low confidence transcriptions (< 30%)
+- Missing or malformed requests
+- API failures (fallback responses)
+- Network timeouts
+
+All errors are logged to console with call_sid for debugging.
+
+### Testing
+
+Manual testing:
+```bash
+# Health check
+curl http://localhost:8000/health
+
+# View active calls
+curl http://localhost:8000/calls
+
+# Get call details
+curl http://localhost:8000/calls/{call_sid}
+```
+
+Interactive testing:
+- Use Twilio Console to simulate calls
+- Check API docs at `/docs`
+
+### Performance Considerations
+
+- Max tokens per response: 300 (keeps responses natural)
+- Timeout per turn: 5 seconds for user input
+- Max call duration: 1 hour
+- Concurrent call limit: Based on uvicorn workers
+
+### Future Enhancements
+
+- [ ] Real-time conversation streaming with partial responses
+- [ ] Voice Activity Detection for natural turn-taking
+- [ ] Call transfer to human agents
+- [ ] Sentiment analysis
+- [ ] Multi-language support
+- [ ] Integration with CRM systems
+- [ ] Advanced analytics dashboard
 
 ## API Endpoints
 
