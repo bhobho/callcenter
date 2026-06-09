@@ -72,9 +72,8 @@ async def incoming_call(request: Request):
             input="speech",
             action="/process-input",
             method="POST",
-            timeout=5,
+            timeout=10,
             speech_timeout="auto",
-            speech_model="default"
         )
         gather.say(
             "Hello, my name is Neeraj. I am a Healthcare bot to answer generic health questions. "
@@ -82,8 +81,18 @@ async def incoming_call(request: Request):
             voice="alice"
         )
 
-        # If the caller said nothing, Gather falls through to here.
-        response.say("I didn't hear anything. Goodbye.", voice="alice")
+        # If the caller said nothing, re-prompt once instead of hanging up.
+        reprompt = response.gather(
+            input="speech",
+            action="/process-input",
+            method="POST",
+            timeout=10,
+            speech_timeout="auto",
+        )
+        reprompt.say("Sorry, I didn't hear you. Please tell me your health question.", voice="alice")
+
+        # Still nothing after the re-prompt -> end politely.
+        response.say("I didn't hear anything. Please call back anytime. Goodbye.", voice="alice")
         response.hangup()
 
         return twiml_response(response)
@@ -130,15 +139,14 @@ async def process_input(request: Request):
         response = VoiceResponse()
         response.say(ai_response, voice="alice")
 
-        # Ask for follow-up and listen on the same turn.
-        gather = response.gather(
+        # Listen for the next question without re-prompting each turn.
+        response.gather(
             input="speech",
             action="/process-input",
             method="POST",
-            timeout=5,
+            timeout=10,
             speech_timeout="auto",
         )
-        gather.say("Is there anything else I can help you with?", voice="alice")
 
         # No further input -> end the call.
         response.say("Thank you for calling. Goodbye!", voice="alice")
