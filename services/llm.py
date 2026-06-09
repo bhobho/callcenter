@@ -8,7 +8,8 @@ logger = logging.getLogger(__name__)
 class LLMService:
     def __init__(self):
         self.client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-        self.model = "claude-3-5-sonnet-20241022"
+        # Haiku 4.5: fastest + cheapest, ideal for low-latency voice
+        self.model = "claude-haiku-4-5-20251001"
         self.conversation_history = []
         self.system_prompt = ""
 

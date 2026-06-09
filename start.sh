@@ -61,4 +61,5 @@ echo ""
 echo "Press Ctrl+C to stop the server"
 echo ""
 
-python main.py
+# Use explicit path to venv python to avoid activation issues
+venv/bin/python main.py

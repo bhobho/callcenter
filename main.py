@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import XMLResponse
+from fastapi.responses import Response
 from twilio.rest import Client
 from twilio.twiml.voice_response import VoiceResponse
 import os
@@ -21,6 +21,11 @@ twilio_client = Client(settings.twilio_account_sid, settings.twilio_auth_token)
 
 # Call manager for handling call state
 call_manager = CallManager()
+
+
+def twiml_response(twiml) -> Response:
+    """Return a TwiML VoiceResponse as an XML HTTP response for Twilio."""
+    return Response(content=str(twiml), media_type="application/xml")
 
 
 @app.on_event("startup")
@@ -61,39 +66,33 @@ async def incoming_call(request: Request):
 
         response = VoiceResponse()
 
-        # Start recording the call for later reference
-        response.record(
-            action="/call-complete",
-            method="POST",
-            max_length=3600,
-            record_status_callback="/record-status",
-            record_status_callback_method="POST"
-        )
-
-        # Welcome message and ask for input
-        response.say(
-            "Hello! Welcome to our AI powered call center. Please tell me how I can help you today.",
-            voice="alice"
-        )
-
-        # Gather speech input
+        # Gather speech input; nest the welcome prompt inside so Twilio
+        # speaks it and then listens for the caller's reply on the same turn.
         gather = response.gather(
             input="speech",
             action="/process-input",
             method="POST",
             timeout=5,
-            max_speech_time=30,
+            speech_timeout="auto",
             speech_model="default"
         )
+        gather.say(
+            "Hello! Welcome to our AI powered call center. Please tell me how I can help you today.",
+            voice="alice"
+        )
 
-        return XMLResponse(content=str(response))
+        # If the caller said nothing, Gather falls through to here.
+        response.say("I didn't hear anything. Goodbye.", voice="alice")
+        response.hangup()
+
+        return twiml_response(response)
 
     except Exception as e:
         logger.error(f"Error in incoming_call: {str(e)}")
         response = VoiceResponse()
         response.say("Sorry, there was an error. Please try again later.")
         response.hangup()
-        return XMLResponse(content=str(response))
+        return twiml_response(response)
 
 
 @app.post("/process-input")
@@ -110,15 +109,17 @@ async def process_input(request: Request):
         if not speech_result or confidence < 0.3:
             logger.warning(f"Low confidence or empty speech for {call_sid}")
             response = VoiceResponse()
-            response.say("I didn't catch that. Could you please repeat?", voice="alice")
             gather = response.gather(
                 input="speech",
                 action="/process-input",
                 method="POST",
                 timeout=5,
-                max_speech_time=30,
+                speech_timeout="auto",
             )
-            return XMLResponse(content=str(response))
+            gather.say("I didn't catch that. Could you please repeat?", voice="alice")
+            response.say("I didn't hear anything. Goodbye.", voice="alice")
+            response.hangup()
+            return twiml_response(response)
 
         # Get AI response
         ai_response = await call_manager.get_ai_response(call_sid, speech_result)
@@ -128,28 +129,28 @@ async def process_input(request: Request):
         response = VoiceResponse()
         response.say(ai_response, voice="alice")
 
-        # Ask for follow-up input or end call
-        response.say("Is there anything else I can help you with?", voice="alice")
-
+        # Ask for follow-up and listen on the same turn.
         gather = response.gather(
             input="speech",
             action="/process-input",
             method="POST",
             timeout=5,
-            max_speech_time=30,
+            speech_timeout="auto",
         )
+        gather.say("Is there anything else I can help you with?", voice="alice")
 
-        # Fallback to hangup if no input
+        # No further input -> end the call.
+        response.say("Thank you for calling. Goodbye!", voice="alice")
         response.hangup()
 
-        return XMLResponse(content=str(response))
+        return twiml_response(response)
 
     except Exception as e:
         logger.error(f"Error in process_input: {str(e)}")
         response = VoiceResponse()
         response.say("Sorry, I encountered an error processing your request.", voice="alice")
         response.hangup()
-        return XMLResponse(content=str(response))
+        return twiml_response(response)
 
 
 @app.post("/call-complete")
@@ -171,13 +172,13 @@ async def call_complete(request: Request):
         response.say("Thank you for calling. Goodbye!", voice="alice")
         response.hangup()
 
-        return XMLResponse(content=str(response))
+        return twiml_response(response)
 
     except Exception as e:
         logger.error(f"Error in call_complete: {str(e)}")
         response = VoiceResponse()
         response.hangup()
-        return XMLResponse(content=str(response))
+        return twiml_response(response)
 
 
 @app.post("/record-status")
