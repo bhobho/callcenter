@@ -77,7 +77,8 @@ async def incoming_call(request: Request):
             speech_model="default"
         )
         gather.say(
-            "Hello! Welcome to our AI powered call center. Please tell me how I can help you today.",
+            "Hello, my name is Neeraj. I am a Healthcare bot to answer generic health questions. "
+            "How can I help you?",
             voice="alice"
         )
 
