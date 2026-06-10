@@ -1,0 +1,27 @@
+# Secrets - never bake into image
+.env
+.env.local
+.env.*.local
+
+# Python virtual environment & caches
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Local data & logs
+data/
+logs/
+
+# Git & dev files
+.git/
+.gitignore
+*.md
+test_integration.py
+requirements-dev.txt
+
+# OS files
+.DS_Store
+.vscode/
+.idea/

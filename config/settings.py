@@ -18,8 +18,7 @@ class Settings(BaseSettings):
     elevenlabs_api_key: str
 
     # Server Configuration
-    # Port 8000 is often taken by Docker on macOS; default to 8080
-    port: int = 8080
+    port: int = 8000
     host: str = "0.0.0.0"
     debug: bool = False
 
