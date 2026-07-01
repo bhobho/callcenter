@@ -72,7 +72,7 @@ class CallManager:
             call["transcript"].append({"role": "user", "text": user_input})
 
             # Get LLM response
-            response = self.llm_service.get_response()
+            response = await self.llm_service.get_response()
             call["transcript"].append({"role": "assistant", "text": response})
             call["messages"].append({"user": user_input, "assistant": response})
 

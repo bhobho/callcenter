@@ -7,10 +7,14 @@ A voice-based call center application that enables real-time conversations betwe
 ## Tech Stack
 
 - **FastAPI**: Web framework for handling Twilio webhooks
-- **Twilio**: VoIP and telephony
-- **Deepgram**: Speech-to-text transcription
-- **Claude API**: Large language model for intelligent responses
-- **ElevenLabs**: Text-to-speech voice synthesis
+- **Twilio**: VoIP and telephony, including built-in speech-to-text
+  (`<Gather input="speech">`) and text-to-speech (`<Say>`)
+- **Claude API**: Large language model for intelligent responses (async client,
+  Haiku 4.5, prompt caching on the system prompt)
+
+> Note: `services/speech_to_text.py` (Deepgram) and `services/text_to_speech.py`
+> (ElevenLabs) exist for a future streaming pipeline but are **not** wired into
+> the live call flow. The running pipeline uses Twilio's native STT/TTS.
 
 ## Project Structure
 

@@ -73,7 +73,7 @@ async def incoming_call(request: Request):
             action="/process-input",
             method="POST",
             timeout=10,
-            speech_timeout="auto",
+            speech_timeout="1",
         )
         gather.say(
             "Hello, my name is Neeraj. I am a Healthcare bot to answer generic health questions. "
@@ -87,7 +87,7 @@ async def incoming_call(request: Request):
             action="/process-input",
             method="POST",
             timeout=10,
-            speech_timeout="auto",
+            speech_timeout="1",
         )
         reprompt.say("Sorry, I didn't hear you. Please tell me your health question.", voice="alice")
 
@@ -124,7 +124,7 @@ async def process_input(request: Request):
                 action="/process-input",
                 method="POST",
                 timeout=5,
-                speech_timeout="auto",
+                speech_timeout="1",
             )
             gather.say("I didn't catch that. Could you please repeat?", voice="alice")
             response.say("I didn't hear anything. Goodbye.", voice="alice")
@@ -145,7 +145,7 @@ async def process_input(request: Request):
             action="/process-input",
             method="POST",
             timeout=10,
-            speech_timeout="auto",
+            speech_timeout="1",
         )
 
         # No further input -> end the call.
